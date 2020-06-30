@@ -1,0 +1,49 @@
+﻿@page "/baza"
+@inject NavigationManager NM
+@using Microsoft.AspNetCore.SignalR.Client;
+@using DB.Shared
+
+<h3>Baza</h3>
+<EditForm Model="o" OnValidSubmit="Posalji">
+	<p><label>Ime: </label><InputText @bind-Value="o.Ime" /></p>
+	<p><label>Prezime: </label><InputText @bind-Value="o.Prezime" /></p>
+	<button class="btn-block" type="submit">Posalji podatke</button>
+</EditForm>
+<ul>
+	@foreach(Osoba o in Osobe)
+	{
+		<li>@o.Ime @o.Prezime  <button class="btn-danger" @onclick="() => Obrisi(o)">X</button></li>
+	}
+</ul>
+
+@code 
+{ 
+	public Osoba o = new Osoba();
+	public List<Osoba> Osobe = new List<Osoba>();
+	public HubConnection HC;
+
+	protected override async Task OnInitializedAsync()
+	{
+		HC = new HubConnectionBuilder().WithUrl(NM.ToAbsoluteUri("db")).Build();
+
+		HC.On<List<Osoba>>("DodajOsobe", (lO) =>
+		{
+			Osobe = lO;
+			StateHasChanged();
+		});
+
+		HC.StartAsync();
+		HC.SendAsync("PosaljiOsobe");
+	}
+
+	public void Posalji()
+	{
+		HC.SendAsync("PrihvatiOsobu", o);
+		o = new Osoba();
+	}
+
+	public void Obrisi(Osoba zaBrisanje)
+	{
+		HC.SendAsync("ObrisiOsobu", zaBrisanje);
+	}
+}
